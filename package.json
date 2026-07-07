@@ -1,0 +1,19 @@
+{
+  "name": "copilot-agent-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A fast, clean, fully client-side dashboard for GitHub Copilot cloud agent tasks/sessions.",
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "devDependencies": {
+    "nuxt": "^4.4.0",
+    "typescript": "^5.6.0",
+    "vue-tsc": "^2.1.0"
+  }
+}
