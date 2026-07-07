@@ -17,11 +17,11 @@
       <h1 class="page__title">Settings</h1>
       <p class="page__lead">
         Your credentials are stored only in this browser (localStorage) and are sent
-        <strong>directly</strong> to the API host below — never to any other server.
+        <strong>directly</strong> to the API host below, never to any other server.
       </p>
 
       <div v-if="showAuthReason" class="notice notice--warn" role="alert">
-        Your session was rejected (401). The token may be invalid or expired — please re-enter it.
+        Your session was rejected (401). The token may be invalid or expired. Please re-enter it.
       </div>
 
       <form class="card form" @submit.prevent="saveAndContinue">
@@ -54,17 +54,58 @@
             type="password"
             autocomplete="off"
             spellcheck="false"
-            placeholder="github_pat_…"
+            placeholder="github_pat_..."
           />
           <p class="field__help">
-            The token needs the <strong>“Agent tasks” repository permission (read)</strong>. Only
-            user-to-server tokens work (a fine-grained PAT or OAuth/GitHub App user token) — GitHub
+            The token needs the <strong>"Agent tasks" repository permission (read)</strong>. Only
+            user-to-server tokens work (a fine-grained PAT or OAuth/GitHub App user token). GitHub
             App <em>installation</em> tokens are rejected.
             <a :href="tokenSettingsUrl" target="_blank" rel="noopener noreferrer">
-              Create a token on {{ webBaseLabel }} →
+              Create a token on {{ webBaseLabel }} &rarr;
             </a>
           </p>
         </div>
+
+        <!-- CORS proxy (advanced / optional) -->
+        <details class="field details-field">
+          <summary class="details-field__summary">Advanced</summary>
+          <div class="field details-field__body">
+            <label class="field__label" for="corsProxy">
+              CORS proxy URL
+              <span class="field__optional">(optional)</span>
+            </label>
+            <input
+              id="corsProxy"
+              v-model="corsProxyInput"
+              class="input"
+              type="url"
+              inputmode="url"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="https://your-cors-proxy.example.com/"
+            />
+            <p class="field__help">
+              Only needed when deploying as a static site and the browser cannot reach the GitHub
+              agent-tasks preview API directly due to CORS. Leave blank when running
+              <code>nuxt dev</code>; the built-in dev proxy handles it automatically.
+              <br />
+              The full GitHub API URL is appended to whatever you enter here (trailing slash), so
+              use the
+              <a
+                href="https://github.com/Rob--W/cors-anywhere"
+                target="_blank"
+                rel="noopener noreferrer"
+                >CORS-Anywhere</a
+              >
+              format: <code>https://your-proxy.example.com/</code>.
+            </p>
+            <p class="field__help field__help--warn">
+              <strong>Security:</strong> your token is forwarded through this proxy as a plain
+              Bearer header. Only use a proxy you own or fully trust; never use a public shared
+              proxy for a credential-bearing request.
+            </p>
+          </div>
+        </details>
 
         <!-- Test result -->
         <div
@@ -84,7 +125,7 @@
             @click="testConnection"
           >
             <span v-if="testing" class="spinner" aria-hidden="true" />
-            {{ testing ? 'Testing…' : 'Test connection' }}
+            {{ testing ? 'Testing...' : 'Test connection' }}
           </button>
 
           <button type="submit" class="btn btn--primary" :disabled="!tokenInput.trim()">
@@ -111,15 +152,16 @@ import { normalizeHost, useSettings, webBaseFromApiHost } from '~/composables/us
 import { useTasks } from '~/composables/useTasks'
 import { githubRequest, tasksPath } from '~/utils/githubApi'
 
-useHead({ title: 'Settings · Copilot Agents' })
+useHead({ title: 'Settings - Copilot Agents' })
 
-const { apiHost, token, isConfigured, save, clear } = useSettings()
+const { apiHost, token, corsProxyUrl, isConfigured, save, clear } = useSettings()
 const { reset } = useTasks()
 const route = useRoute()
 
 // Local form state, seeded from persisted settings.
 const hostInput = ref(apiHost.value)
 const tokenInput = ref(token.value)
+const corsProxyInput = ref(corsProxyUrl.value)
 
 const showAuthReason = computed(() => route.query.reason === 'auth')
 
@@ -142,12 +184,13 @@ async function testConnection() {
   const apiBase = normalizeHost(hostInput.value)
   const res = await githubRequest(apiBase, tasksPath({ per_page: 1 }), {
     token: tokenInput.value.trim(),
+    corsProxyUrl: corsProxyInput.value.trim() || undefined,
   })
   testing.value = false
   if (res.ok) {
     testResult.value = {
       ok: true,
-      message: 'Success — the token works and the agent tasks API is reachable.',
+      message: 'Success. The token works and the agent tasks API is reachable.',
     }
   } else {
     testResult.value = { ok: false, message: res.errorMessage ?? `Request failed (${res.status}).` }
@@ -159,7 +202,7 @@ function saveAndContinue() {
     testResult.value = { ok: false, message: 'Enter a token first.' }
     return
   }
-  save({ apiHost: hostInput.value, token: tokenInput.value })
+  save({ apiHost: hostInput.value, token: tokenInput.value, corsProxyUrl: corsProxyInput.value })
   // Wipe any cached tasks so the dashboard reloads fresh with the new creds.
   reset()
   navigateTo('/')
@@ -170,6 +213,7 @@ function signOut() {
   reset()
   hostInput.value = apiHost.value // reset back to default host
   tokenInput.value = ''
+  corsProxyInput.value = ''
   testResult.value = null
 }
 </script>
@@ -202,6 +246,50 @@ function signOut() {
   margin-top: 1.5rem;
   font-size: 0.82rem;
   color: var(--text-3);
+}
+.field__optional {
+  font-weight: 400;
+  font-size: 0.8em;
+  color: var(--text-3);
+  margin-left: 0.3rem;
+}
+.field__help--warn {
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--state-attention-bg) 60%, transparent);
+  border: 1px solid var(--state-attention-border);
+  color: var(--text-1);
+}
+.details-field {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0;
+  background: transparent;
+}
+.details-field__summary {
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-2);
+  user-select: none;
+  list-style: none;
+}
+.details-field__summary::-webkit-details-marker {
+  display: none;
+}
+.details-field__summary::before {
+  content: '\25B6';
+  display: inline-block;
+  font-size: 0.65em;
+  margin-right: 0.4rem;
+  transition: transform 0.15s;
+}
+details[open] .details-field__summary::before {
+  transform: rotate(90deg);
+}
+.details-field__body {
+  padding: 0 0.75rem 0.75rem;
 }
 .icon-btn__text {
   display: none;

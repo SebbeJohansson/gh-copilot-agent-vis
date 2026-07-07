@@ -55,7 +55,7 @@
       <!-- Rate-limit banner -->
       <div v-if="rateLimitedUntil" class="notice notice--warn" role="alert">
         Rate limit reached. Polling is paused until <strong>{{ rateLimitClock }}</strong
-        >. Nothing to worry about — it'll resume automatically.
+        >. It will resume automatically.
       </div>
 
       <!-- Non-fatal error banner (we still have tasks to show) -->
@@ -90,7 +90,7 @@
         </h2>
         <p class="state-card__body">
           <template v-if="tasks.length">
-            No tasks match the “{{ filter }}” filter right now.
+            No tasks match the "{{ filter }}" filter right now.
           </template>
           <template v-else>
             When you start a Copilot coding agent task, it'll show up here. Tasks refresh

@@ -1,10 +1,14 @@
 <template>
-  <a
+  <!--
+    safeHref guards against a javascript: URL in task.html_url. If the API
+    ever returns a non-http(s) URL, the card becomes non-clickable (div)
+    rather than executing script.
+  -->
+  <component
+    :is="safeHref ? 'a' : 'div'"
     class="task"
-    :href="task.html_url"
-    target="_blank"
-    rel="noopener noreferrer"
-    :aria-label="`Open task ${task.name} on GitHub (opens in a new tab)`"
+    v-bind="safeHref ? { href: safeHref, target: '_blank', rel: 'noopener noreferrer' } : {}"
+    :aria-label="safeHref ? `Open task ${task.name} on GitHub (opens in a new tab)` : task.name"
   >
     <div class="task__main">
       <div class="task__top">
@@ -30,14 +34,14 @@
       </div>
     </div>
 
-    <span class="task__open" aria-hidden="true">
+    <span v-if="safeHref" class="task__open" aria-hidden="true">
       <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor">
         <path
           d="M3.75 2h3.5a.75.75 0 0 1 0 1.5h-3.5a.25.25 0 0 0-.25.25v8.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-3.5a.75.75 0 0 1 1.5 0v3.5A1.75 1.75 0 0 1 12.25 14h-8.5A1.75 1.75 0 0 1 2 12.25v-8.5C2 2.784 2.784 2 3.75 2Zm6.854-1h4.146a.25.25 0 0 1 .25.25V5.4a.25.25 0 0 1-.427.177L13.03 4.03 9.28 7.78a.75.75 0 0 1-1.06-1.06l3.75-3.75-1.543-1.543A.25.25 0 0 1 10.604 1Z"
         />
       </svg>
     </span>
-  </a>
+  </component>
 </template>
 
 <script setup lang="ts">
@@ -46,6 +50,20 @@ import { findPullArtifact, type AgentTask } from '~/types/agent'
 import { formatAbsoluteTime, formatRelativeTime } from '~/utils/time'
 
 const props = defineProps<{ task: AgentTask; now: number }>()
+
+// Only allow http: and https: URLs. Any other scheme (e.g. javascript:)
+// causes the card to render as a non-interactive div instead of a link.
+const safeHref = computed<string | null>(() => {
+  const url = props.task.html_url
+  if (typeof url !== 'string') return null
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol === 'https:' || parsed.protocol === 'http:') return url
+  } catch {
+    // invalid URL
+  }
+  return null
+})
 
 const relativeUpdated = computed(() => formatRelativeTime(props.task.updated_at, props.now))
 const absoluteUpdated = computed(() => formatAbsoluteTime(props.task.updated_at))
@@ -88,6 +106,10 @@ const prTitle = computed(() => 'This task has an associated pull request')
 .task:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+/* When rendered as a div (unsafe URL), remove pointer cursor */
+div.task {
+  cursor: default;
 }
 
 .task__main {

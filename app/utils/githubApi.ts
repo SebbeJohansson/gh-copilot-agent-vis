@@ -10,7 +10,7 @@ import type { TaskQuery } from '~/types/agent'
  *
  * Every request sends exactly the three required headers and nothing else that
  * could leak credentials. `credentials: 'omit'` guarantees no cookies are ever
- * attached — the bearer token is the only thing sent, and only to `apiBase`.
+ * attached; the bearer token is the only thing sent, and only to `apiBase`.
  */
 
 export const GITHUB_API_VERSION = '2026-03-10'
@@ -24,7 +24,7 @@ export interface RateLimitInfo {
 export interface ApiResponse<T> {
   status: number
   ok: boolean
-  /** True when the server replied 304 (ETag matched) — data is unchanged. */
+  /** True when the server replied 304 (ETag matched); data is unchanged. */
   notModified: boolean
   data: T | null
   etag: string | null
@@ -60,7 +60,7 @@ async function describeError(res: Response): Promise<string> {
     const body = (await res.json()) as { message?: unknown }
     if (body && typeof body.message === 'string') apiMessage = body.message
   } catch {
-    // non-JSON error body — ignore
+    // non-JSON error body; ignore
   }
   let base: string
   switch (res.status) {
@@ -69,7 +69,7 @@ async function describeError(res: Response): Promise<string> {
       break
     case 403:
       base =
-        'Forbidden (403): the token is missing the “Agent tasks” repository permission (read), or your account/plan lacks access. Note: GitHub App installation tokens are rejected — use a fine-grained PAT or user token.'
+        'Forbidden (403): the token is missing the "Agent tasks" repository permission (read), or your account/plan lacks access. Note: GitHub App installation tokens are rejected; use a fine-grained PAT or user token.'
       break
     case 404:
       base =
@@ -81,26 +81,54 @@ async function describeError(res: Response): Promise<string> {
     default:
       base = `Request failed (${res.status}).`
   }
-  return apiMessage ? `${base} — ${apiMessage}` : base
+  return apiMessage ? `${base}: ${apiMessage}` : base
 }
 
 /**
- * Perform a single GET request. Never throws for HTTP errors — inspect the
+ * Perform a single GET request. Never throws for HTTP errors; inspect the
  * returned `ApiResponse` (`ok`, `status`, `notModified`, `errorMessage`).
+ *
+ * Request routing (in priority order):
+ *  1. Dev mode (`nuxt dev`): requests are routed through the local Nitro proxy
+ *     at `/api/proxy/**` to avoid CORS.  The real `apiBase` is passed via the
+ *     `x-proxy-target` header; the proxy forwards everything to GitHub
+ *     server-side.  This proxy is excluded from static builds.
+ *  2. `opts.corsProxyUrl` set (production static deploys): the full GitHub URL
+ *     is appended to the proxy URL, e.g.
+ *     `https://cors-proxy.example.com/https://api.github.com/agents/tasks`.
+ *  3. Otherwise: direct browser-to-GitHub request (works on hosts where GitHub
+ *     returns the necessary CORS headers for this endpoint).
  */
 export async function githubRequest<T>(
   apiBase: string,
   path: string,
-  opts: { token: string; etag?: string | null; signal?: AbortSignal },
+  opts: { token: string; etag?: string | null; signal?: AbortSignal; corsProxyUrl?: string },
 ): Promise<ApiResponse<T>> {
-  const url = `${apiBase}${path}`
   const empty: RateLimitInfo = { remaining: null, reset: null, limit: null }
+
+  // Build the effective request URL and headers depending on the routing mode.
+  let url: string
+  const headers = buildHeaders(opts.token, opts.etag)
+
+  if (import.meta.dev) {
+    // Route through the same-origin Nitro dev proxy to avoid CORS preflight
+    // failures against the GitHub preview API.  The proxy strips x-proxy-target
+    // before forwarding, so it never reaches GitHub.
+    url = `/api/proxy${path}`
+    headers['x-proxy-target'] = apiBase
+  } else if (opts.corsProxyUrl) {
+    // Production CORS proxy: append the full GitHub URL to the proxy base.
+    // Expected format: "https://your-proxy.example.com/" (with trailing slash).
+    url = `${opts.corsProxyUrl}${apiBase}${path}`
+  } else {
+    url = `${apiBase}${path}`
+  }
 
   let res: Response
   try {
     res = await fetch(url, {
       method: 'GET',
-      headers: buildHeaders(opts.token, opts.etag),
+      headers,
       signal: opts.signal,
       credentials: 'omit',
       cache: 'no-store',
@@ -126,7 +154,7 @@ export async function githubRequest<T>(
       etag: null,
       rateLimit: empty,
       errorMessage:
-        'Network error — could not reach the API host. Check the API host URL, your connection, or that the host allows CORS.',
+        'Network error: could not reach the API host. Check the API host URL, your connection, or that the host allows CORS.',
     }
   }
 

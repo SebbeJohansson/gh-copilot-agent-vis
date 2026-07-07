@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-// Presentational only — pages provide their own action buttons via the slot.
+// Presentational only; pages provide their own action buttons via the slot.
 </script>
 
 <style scoped>

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Copilot Agent Dashboard — global styles
+   Copilot Agent Dashboard - global styles
    - Design tokens for light (default) + dark (prefers-color-scheme: dark)
    - No external fonts/CDNs: system font stack only, so it works offline / on a
      locked-down network.
@@ -31,7 +31,7 @@
   --accent: #0969da;
   --accent-contrast: #ffffff;
 
-  /* State colours — badges */
+  /* State colours (badges) */
   --state-progress-bg: #ddf4ff;
   --state-progress-fg: #0969da;
   --state-progress-border: #54aeff;

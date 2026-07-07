@@ -98,7 +98,7 @@ const label = computed(() => {
 .badge--progress .badge__dot {
   animation: badge-pulse 1.6s ease-in-out infinite;
 }
-/* waiting_for_user is visually loud — pulse it too so it grabs attention */
+/* waiting_for_user is visually loud; pulse it too so it grabs attention */
 .badge--attention .badge__dot {
   animation: badge-pulse 1.2s ease-in-out infinite;
 }

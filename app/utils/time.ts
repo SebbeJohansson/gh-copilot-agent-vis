@@ -36,7 +36,7 @@ export function formatRelativeTime(iso: string | null | undefined, now: number =
   return wrap(`${year} y`)
 }
 
-/** Full, locale-aware absolute time — used as the `title`/tooltip. */
+/** Full, locale-aware absolute time, used as the `title` tooltip. */
 export function formatAbsoluteTime(iso: string | null | undefined): string {
   if (!iso) return ''
   const d = new Date(iso)
@@ -50,10 +50,10 @@ export function formatAbsoluteTime(iso: string | null | undefined): string {
   })
 }
 
-/** HH:MM:SS in the local timezone — used for the "last updated" indicator. */
+/** HH:MM:SS in the local timezone, used for the "last updated" indicator. */
 export function formatClock(date: Date | number | null | undefined): string {
-  if (date == null) return '—'
+  if (date == null) return '-'
   const d = typeof date === 'number' ? new Date(date) : date
-  if (Number.isNaN(d.getTime())) return '—'
+  if (Number.isNaN(d.getTime())) return '-'
   return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }

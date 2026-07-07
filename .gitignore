@@ -6,6 +6,10 @@ dist
 
 # Dependencies
 node_modules
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
 
 # Logs
 logs
@@ -20,7 +24,7 @@ yarn-error.log*
 .idea
 .vscode
 
-# Local env files (there should be NO secrets in this repo — tokens live only
+# Local env files (there should be NO secrets in this repo; tokens live only
 # in the user's browser localStorage)
 .env
 .env.*

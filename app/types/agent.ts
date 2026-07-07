@@ -2,7 +2,7 @@
  * Types for the GitHub Copilot **agent tasks** REST API (public preview,
  * verified July 2026). The API version header is `2026-03-10`.
  *
- * IMPORTANT: This is a preview API — the shape WILL change and undocumented
+ * IMPORTANT: This is a preview API; the shape WILL change and undocumented
  * fields may appear. Every interface below therefore tolerates unknown extra
  * fields (via index signatures) and unknown `state` values (via the open
  * `TaskState` union). Do not add runtime assumptions that reject unknown data.
@@ -102,7 +102,7 @@ export interface TaskQuery {
   /** Comma-separated list of states, e.g. `queued,in_progress`. */
   state?: string
   is_archived?: boolean
-  /** ISO 8601 timestamp — only return tasks updated at or after this time. */
+  /** ISO 8601 timestamp; only return tasks updated at or after this time. */
   since?: string
   creator_id?: number
 }

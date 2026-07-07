@@ -20,10 +20,13 @@ const DEFAULT_API_HOST = 'https://api.github.com'
 interface StoredSettings {
   apiHost: string
   token: string
+  /** Optional CORS proxy URL for production static deployments. */
+  corsProxyUrl?: string
 }
 
 const apiHost = ref<string>(DEFAULT_API_HOST)
 const token = ref<string>('')
+const corsProxyUrl = ref<string>('')
 let loaded = false
 
 /** Normalize a host: add https:// if missing, trim, strip trailing slashes. */
@@ -72,8 +75,9 @@ function load(): void {
     const parsed = JSON.parse(raw) as Partial<StoredSettings>
     if (parsed.apiHost) apiHost.value = normalizeHost(parsed.apiHost)
     if (typeof parsed.token === 'string') token.value = parsed.token
+    if (typeof parsed.corsProxyUrl === 'string') corsProxyUrl.value = parsed.corsProxyUrl
   } catch {
-    // Corrupt storage — ignore and fall back to defaults.
+    // Corrupt storage; ignore and fall back to defaults.
   }
 }
 
@@ -81,9 +85,9 @@ function load(): void {
  * Read the current resolved credentials without allocating computed refs.
  * Handy for non-reactive callers like the polling engine.
  */
-export function getResolvedSettings(): { apiBase: string; token: string } {
+export function getResolvedSettings(): { apiBase: string; token: string; corsProxyUrl: string } {
   load()
-  return { apiBase: normalizeHost(apiHost.value), token: token.value }
+  return { apiBase: normalizeHost(apiHost.value), token: token.value, corsProxyUrl: corsProxyUrl.value }
 }
 
 export function useSettings() {
@@ -96,11 +100,16 @@ export function useSettings() {
   const tokenSettingsUrl = computed(() => `${webBase.value}/settings/personal-access-tokens`)
 
   /** Persist the given settings and update in-memory state. */
-  function save(next: { apiHost: string; token: string }): void {
+  function save(next: { apiHost: string; token: string; corsProxyUrl?: string }): void {
     apiHost.value = normalizeHost(next.apiHost)
     token.value = next.token.trim()
+    corsProxyUrl.value = (next.corsProxyUrl ?? '').trim()
     if (typeof window !== 'undefined') {
-      const payload: StoredSettings = { apiHost: apiHost.value, token: token.value }
+      const payload: StoredSettings = {
+        apiHost: apiHost.value,
+        token: token.value,
+        corsProxyUrl: corsProxyUrl.value,
+      }
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
     }
   }
@@ -109,6 +118,7 @@ export function useSettings() {
   function clear(): void {
     token.value = ''
     apiHost.value = DEFAULT_API_HOST
+    corsProxyUrl.value = ''
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(STORAGE_KEY)
     }
@@ -118,6 +128,7 @@ export function useSettings() {
     // reactive raw values
     apiHost,
     token,
+    corsProxyUrl,
     // derived
     apiBase,
     webBase,

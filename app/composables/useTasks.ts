@@ -16,8 +16,8 @@ import { getResolvedSettings } from '~/composables/useSettings'
  * Data flow:
  *  - Initial load (and every ~10 min, and on manual refresh) does a FULL fetch,
  *    paginating up to 5 pages of 100 to build the complete list.
- *  - Between full refreshes we POLL a *stable* URL — page 1 sorted by
- *    updated_at desc, with `since=<anchor>` — so we only pull recently-updated
+ *  - Between full refreshes we POLL a *stable* URL: page 1 sorted by
+ *    updated_at desc, with `since=<anchor>`, so we only pull recently-updated
  *    tasks and merge them by id. Because the URL is stable between full
  *    refreshes, the stored ETag stays valid and unchanged data comes back as a
  *    cheap 304 (which doesn't count against the rate limit). This satisfies
@@ -162,11 +162,11 @@ function finishCycle(changed: boolean) {
 async function fetchAllPages(
   signal: AbortSignal,
 ): Promise<{ ok: boolean; tasks: AgentTask[]; failure?: ApiResponse<unknown> }> {
-  const { apiBase, token } = getResolvedSettings()
+  const { apiBase, token, corsProxyUrl } = getResolvedSettings()
   const all: AgentTask[] = []
   for (let page = 1; page <= MAX_PAGES; page += 1) {
     const path = tasksPath({ per_page: PER_PAGE, page, sort: 'updated_at', direction: 'desc' })
-    const res = await githubRequest<TasksResponse>(apiBase, path, { token, signal })
+    const res = await githubRequest<TasksResponse>(apiBase, path, { token, signal, corsProxyUrl })
     if (!res.ok) return { ok: false, tasks: all, failure: res }
     const batch = res.data?.tasks ?? []
     all.push(...batch)
@@ -178,7 +178,7 @@ async function fetchAllPages(
 async function pollSince(
   signal: AbortSignal,
 ): Promise<{ status: 'ok' | 'not_modified' | 'fail'; changed: boolean; failure?: ApiResponse<unknown> }> {
-  const { apiBase, token } = getResolvedSettings()
+  const { apiBase, token, corsProxyUrl } = getResolvedSettings()
   const path = tasksPath({
     per_page: PER_PAGE,
     sort: 'updated_at',
@@ -189,6 +189,7 @@ async function pollSince(
     token,
     etag: etags.get(path) ?? null,
     signal,
+    corsProxyUrl,
   })
   if (res.notModified) return { status: 'not_modified', changed: false }
   if (!res.ok) return { status: 'fail', changed: false, failure: res }
